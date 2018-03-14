@@ -1,2 +1,2 @@
-# hapi-nes-chat-app
+# hapi-nes-nats.io-app
 Browser -> NES (websocket) -> NATS -> Browser
