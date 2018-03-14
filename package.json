@@ -1,0 +1,26 @@
+{
+  "name": "nes-websocket-server-app",
+  "private": true,
+  "description": "Simple WS Server app",
+  "main": "./server/index.js",
+  "dependencies": {
+    "hapi": "^17.2.0",
+    "nes": "^7.1.0",
+    "node-nats-streaming": "0.0.26"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node ./server/index.js",
+    "dev": "nodemon ./server/index.js"
+  },
+  "keywords": [
+    "hapi",
+    "hapijs",
+    "nes",
+    "chat",
+    "example"
+  ],
+  "author": "asad.gooogle@gmail.com",
+  "license": "MIT",
+  "version": "1.0.0"
+}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Kraken Notification Service</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px 'inconsolata',menlo,consolas,monospaced; }
+      form { background: #6f6f6f; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 87%; margin-right: .5%; }
+      form button { width: 12%; background: #f6941e; border: none; padding: 10px; font-family: 'inconsolata',menlo,consolas,monospaced; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; min-height: 50px; } 
+      #messages li .info { color: gray; }
+      #messages li .error { color: red; }
+      #messages li .messageAvatar { display: table-cell; vertical-align: middle; width: 50px; height: 50px; }
+      #messages li .messageAvatar img { height: 35px; border-radius: 20px; float: left; }
+      #messages li .messageContent {   display: table-cell; vertical-align: middle; min-height: 50px; }
+      #messages li:nth-child(odd) { background: #f8f8f8 }
+    </style>
+  </head>
+  <body>
+    <div>
+    <ul id="messages"></ul>
+    </div>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Brwsr-> NATS-> Brwsr</button>
+    </form>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nes/7.1.0/client.js"></script>
+    <script type="text/javascript">
+      const reqId = getQueryParameter('id') ? getQueryParameter('id') : 'public';
+      const path = '/api/notification/' + reqId;
+
+      addMessage({message: 'Connecting to honeycomb NATS service...'}, 'info');
+
+      // Load the Websocket client library
+      const protocol = window.location.protocol.indexOf('https') === -1 ? 'ws' : 'wss'
+      // const client = new nes.Client(`${protocol}://${window.location.host}`);
+      const client = new nes.Client(`${protocol}://localhost:9876`);
+      // Set an onConnect listener and connect to the service
+      let connected = false;
+      client.onConnect = () => {
+
+        if (connected) { 
+          console.log('WSocket connected');
+          return; 
+          
+          }
+        connected = true;
+
+        let message = `Connected to Notification: ${reqId}.`;
+        if (reqId === 'public') {
+          message += ' Unauthenticated Message';
+        } else {
+          message += ' ';
+        }
+
+        addMessage({ message: message }, 'info');
+        // get notification history
+        client.request(path, (err, messages) => {
+          if (err) { return addMessage(err, 'error'); }
+
+          messages.forEach((msg) => addMessage(msg))
+        })
+      };
+      client.connect({ auth: { headers: { cookie: document.cookie }}}, (err) => addMessage(err, 'error'));
+
+      // Subscribe to a websocket channel
+      client.subscribe(path, (msg) => addMessage(msg), (err) => addMessage(err, 'error'));
+
+      // Send Messages on form submit
+      document.querySelector('form').onsubmit = (event) => {
+        event.preventDefault();
+
+        const message = {
+          method: 'POST',
+          path: path,
+          payload: {
+            message: document.getElementById('m').value
+          }
+        }
+        client.request(message, (err, res) => console.log(err, res));
+        document.getElementById('m').value = "";
+        return false;
+      }
+
+      // Add message 
+      function addMessage (msg, className = '') {
+        const message = (msg && msg.message) || msg;
+        const msgUser = msg.user || 'Mr. Kraken';
+        const user = (msg && msg.user) || { avatarUrl: 'kraken.png' }
+        if (!message) { return; }
+        // console.log(className, message);
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div>
+            <div class="messageAvatar">
+              <a href="{user.username}" target="_blank"><img src="${user.avatarUrl}" /></a>
+            </div>
+            <div class="messageContent">
+              <h4>Kraken</h4>
+              <p class="${className}">${message}</p>
+            </div>
+          </div>
+        `;
+        document.getElementById('messages').appendChild(li);
+      }
+
+      //Get the query parameter to use as Req ID
+      function getQueryParameter(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        const regex = new RegExp("[\\?&]" + name + "=([^&#]*)"), results = regex.exec(location.search);
+        return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+      }
+    </script>
+    </body>
+</html>
